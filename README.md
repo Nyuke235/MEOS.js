@@ -1,12 +1,129 @@
 # MEOS.js
 
-A Javascript driver of the MEOS library.
+TypeScript/JavaScript bindings for [MEOS](https://libmeos.org/), the C library that powers [MobilityDB](https://mobilitydb.com/) spatiotemporal types.
 
-<img src="https://github.com/MobilityDB/MobilityDB/blob/master/doc/images/mobilitydb-logo.svg" width="200" alt="MobilityDB Logo" />
+MEOS is compiled to WebAssembly via [Emscripten](https://emscripten.org/). MEOS.js wraps the resulting `.wasm` module in a typed TypeScript API so you can work with temporal values (booleans, integers, floats, time spans...) in Node.js or the browser.
 
-MobilityDB is developed by the Computer & Decision Engineering Department of the [Université libre de Bruxelles](https://www.ulb.be/) (ULB) under the direction of [Prof. Esteban Zimányi](http://cs.ulb.ac.be/members/esteban/). ULB is an OGC Associate Member and member of the OGC Moving Feature Standard Working Group ([MF-SWG](https://www.ogc.org/projects/groups/movfeatswg)).
+## Table of contents
+- [Requirements](#Requirements)
+- [Installation](#Installation)
+- [Memory management](#Memory-management)
+- [Implemented types](#Implemented-types)
 
-<img src="https://github.com/MobilityDB/MobilityDB/blob/master/doc/images/OGC_Associate_Member_3DR.png" width="100" alt="OGC Associate Member Logo" />
+## Requirements
 
-More information about MobilityDB, including publications, presentations, etc., can be found in the MobilityDB [website](https://mobilitydb.com).
+- **Node.js** 18+ (tests and code generation use the built-in test runner and `tsx`)
+- **Docker**: required only to build the WASM module from source; not needed if you use the prebuilt files
 
+No other local toolchain is needed. All C/Emscripten compilation happens inside the Docker container.
+
+## Installation
+
+### 1. Install Node dependencies
+
+```bash
+npm install
+```
+
+### 2. Get the WASM module
+
+**Option A - build from source (Docker)**
+
+```bash
+# wasm64 (default)
+docker build --output type=local,dest=./wasm --target wasm .
+
+# wasm32
+docker build --build-arg TARGET=wasm32 --output type=local,dest=./wasm --target wasm .
+```
+
+This produces `wasm/meos.js` and `wasm/meos.wasm`. The first build might take a long time as it compiles GEOS, PROJ, SQLite, GSL, JSON-C, and MobilityDB from source.
+
+**Option B - use the prebuilt files**
+
+*todo*
+
+### 3. Run the tests
+To assure WASM is working fine, run the tests:
+
+```bash
+npm test
+```
+
+> **Future:** MEOS.js is intended to be published as an npm package so that the installation will be as simple as `npm install meos.js`, with the WASM binary bundled directly in the package.
+
+## Memory management
+
+Every MEOS.js object wraps a raw pointer allocated in WASM memory. This memory is **not** managed by the JavaScript garbage collector and must be freed explicitly.
+
+**Option 1: manual `free()`**
+
+```ts
+const span = TsTzSpan.fromString('[2020-01-01, 2021-01-01)');
+// ... use span ...
+span.free();
+```
+
+**Option 2: `using` (recommended)**
+
+All types implement `[Symbol.dispose]()`, so you can use the ES2025 [Explicit Resource Management](https://github.com/tc39/proposal-explicit-resource-management) syntax. The object is freed automatically when the block exits, even if an exception is thrown.
+
+```ts
+{
+    using span = TsTzSpan.fromString('[2020-01-01, 2021-01-01)');
+    console.log(span.toString());
+} // span.free() called automatically here
+```
+
+> **Note:** `using` requires TypeScript 5.2+ with `"lib": ["ES2025"]` (or `"ESNext"`) in `tsconfig.json`.
+
+## Implemented types
+
+
+### Base classes (`src/types/base/`)
+
+ Class        | Description                                 
+--------------|---------------------------------------------
+ `MeoSet<T>`  | Abstract generic base for all set types 
+ `Span`       | Abstract base for all span types            
+ `SpanSet<S>` | Abstract generic base for all spanset types     
+
+
+### Temporal types (`src/types/temporal/` & `src/types/base/`)
+
+ Class    | Description      | Tests                            
+----------|------------------|----------------------------------
+ `TBool`  | Temporal boolean | ✅ `test/temporal/test_tbool.ts`  
+ `TInt`   | Temporal integer | ✅ `test/temporal/test_tint.ts`   
+ `TFloat` | Temporal float   | ✅ `test/temporal/test_tfloat.ts` 
+
+
+### Number types (`src/types/number/`)
+
+ Class          | Description          | Tests                             
+----------------|----------------------|-----------------------------------
+ `IntSpan`      | Span of integers     | ✅ `test/number/test_intspan.ts`   
+ `IntSpanSet`   | Set of integer spans | 🔲                                
+ `IntSet`       | Set of integers      | 🔲                                
+ `FloatSpan`    | Span of floats       | ✅ `test/number/test_floatspan.ts` 
+ `FloatSpanSet` | Set of float spans   | 🔲                                
+ `FloatSet`     | Set of floats        | 🔲                                
+
+
+### Time types (`src/types/time/`)
+
+ Class         | Description               | Tests                             
+---------------|---------------------------|-----------------------------------
+ `TsTzSpan`    | Timestamptz span          | ✅ `test/time/test_tstzspan.ts`    
+ `TsTzSpanSet` | Set of timestamptz spans  | ✅ `test/time/test_tstzspanset.ts` 
+ `TsTzSet`     | Set of timestamptz values | ✅ `test/time/test_tstzset.ts`     
+ `DateSpan`    | Date span                 | ✅ `test/time/test_datespan.ts`    
+ `DateSpanSet` | Set of date spans         | 🔲                                
+ `DateSet`     | Set of dates              | 🔲   
+
+
+### Boxes (`src/types/boxes/`)
+
+ Class  | Description                     | Tests 
+--------|---------------------------------|-------
+ `TBox` | Numeric x temporal bounding box | 🔲    

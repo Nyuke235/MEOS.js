@@ -1,0 +1,25 @@
+{
+  "name": "meos.js",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "JavaScript/TypeScript bindings for MobilityDB MEOS via WebAssembly",
+  "main": "index.js",
+  "scripts": {
+    "generate": "npx tsx src/builder/FunctionsGenerator.ts",
+    "build:wasm": "bash scripts/build_wasm.sh",
+    "build:ts": "tsc",
+    "build": "npm run build:wasm && npm run build:ts",
+    "test": "node --import tsx/esm --test 'test/**/test_*.ts'",
+    "play": "node --import tsx/esm test/playground.ts",
+    "dev": "vite"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.7"
+  }
+}
