@@ -103,11 +103,11 @@ All types implement `[Symbol.dispose]()`, so you can use the ES2025 [Explicit Re
  Class          | Description          | Tests                             
 ----------------|----------------------|-----------------------------------
  `IntSpan`      | Span of integers     | ✅ `test/number/test_intspan.ts`   
- `IntSpanSet`   | Set of integer spans | 🔲                                
- `IntSet`       | Set of integers      | 🔲                                
+ `IntSpanSet`   | Set of integer spans | ✅ `test/number/test_intspanset.ts`
+ `IntSet`       | Set of integers      | ✅ `test/number/test_intset.ts`
  `FloatSpan`    | Span of floats       | ✅ `test/number/test_floatspan.ts` 
- `FloatSpanSet` | Set of float spans   | 🔲                                
- `FloatSet`     | Set of floats        | 🔲                                
+ `FloatSpanSet` | Set of float spans   | ✅ `test/number/test_floatspanset.ts`
+ `FloatSet`     | Set of floats        | ✅ `test/number/test_floatset.ts`
 
 
 ### Time types (`src/types/time/`)
@@ -118,8 +118,8 @@ All types implement `[Symbol.dispose]()`, so you can use the ES2025 [Explicit Re
  `TsTzSpanSet` | Set of timestamptz spans  | ✅ `test/time/test_tstzspanset.ts` 
  `TsTzSet`     | Set of timestamptz values | ✅ `test/time/test_tstzset.ts`     
  `DateSpan`    | Date span                 | ✅ `test/time/test_datespan.ts`    
- `DateSpanSet` | Set of date spans         | 🔲                                
- `DateSet`     | Set of dates              | 🔲   
+ `DateSpanSet` | Set of date spans         | ✅ `test/time/test_datespanset.ts`
+ `DateSet`     | Set of dates              | ✅ `test/time/test_dateset.ts`
 
 
 ### Boxes (`src/types/boxes/`)

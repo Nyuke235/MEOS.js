@@ -7,7 +7,6 @@ before(async () => {
 	await initMeos();
 });
 
-// DateADT = days since 2000-01-01
 const D0 = 0; // 2000-01-01
 const D10 = 10; // 2000-01-11
 const D20 = 20; // 2000-01-21
