@@ -1,4 +1,5 @@
 import type { Ptr, TimestampTz } from '../../core/functions';
+import { getModule } from '../../core/meos';
 import {
 	tbox_in,
 	tbox_out,
@@ -23,9 +24,20 @@ import {
 	int_to_tbox,
 	float_to_tbox,
 	span_to_tbox,
+	timestamptz_to_tbox,
+	int_timestamptz_to_tbox,
+	float_timestamptz_to_tbox,
+	int_tstzspan_to_tbox,
+	float_tstzspan_to_tbox,
+	numspan_tstzspan_to_tbox,
+	numspan_timestamptz_to_tbox,
+	set_to_tbox,
+	spanset_to_tbox,
 	tintbox_expand,
 	tfloatbox_expand,
 	tbox_round,
+	tintbox_shift_scale,
+	tfloatbox_shift_scale,
 	adjacent_tbox_tbox,
 	contained_tbox_tbox,
 	contains_tbox_tbox,
@@ -90,19 +102,52 @@ export class TBox {
 		return new TBox(tbox_from_hexwkb(hexwkb));
 	}
 
-	// TBox with only a numeric dimension from a single integer.
 	static fromInt(i: number): TBox {
 		return new TBox(int_to_tbox(i));
 	}
 
-	// TBox with only a numeric dimension from a single float.
 	static fromFloat(d: number): TBox {
 		return new TBox(float_to_tbox(d));
 	}
 
-	// TBox from a numeric span (IntSpan or FloatSpan) only.
 	static fromSpan(spanPtr: Ptr): TBox {
 		return new TBox(span_to_tbox(spanPtr));
+	}
+
+	static fromTimestamp(t: TimestampTz): TBox {
+		return new TBox(timestamptz_to_tbox(t));
+	}
+
+	static fromIntTimestamp(i: number, t: TimestampTz): TBox {
+		return new TBox(int_timestamptz_to_tbox(i, t));
+	}
+
+	static fromFloatTimestamp(d: number, t: TimestampTz): TBox {
+		return new TBox(float_timestamptz_to_tbox(d, t));
+	}
+
+	static fromIntTsTzSpan(i: number, tstzSpanPtr: Ptr): TBox {
+		return new TBox(int_tstzspan_to_tbox(i, tstzSpanPtr));
+	}
+
+	static fromFloatTsTzSpan(d: number, tstzSpanPtr: Ptr): TBox {
+		return new TBox(float_tstzspan_to_tbox(d, tstzSpanPtr));
+	}
+
+	static fromNumSpanTsTzSpan(numSpanPtr: Ptr, tstzSpanPtr: Ptr): TBox {
+		return new TBox(numspan_tstzspan_to_tbox(numSpanPtr, tstzSpanPtr));
+	}
+
+	static fromNumSpanTimestamp(numSpanPtr: Ptr, t: TimestampTz): TBox {
+		return new TBox(numspan_timestamptz_to_tbox(numSpanPtr, t));
+	}
+
+	static fromSet(setPtr: Ptr): TBox {
+		return new TBox(set_to_tbox(setPtr));
+	}
+
+	static fromSpanSet(spanSetPtr: Ptr): TBox {
+		return new TBox(spanset_to_tbox(spanSetPtr));
 	}
 
 	/**
@@ -126,8 +171,12 @@ export class TBox {
 	}
 
 	asHexWKB(variant = 4): string {
-		const size = 0 as Ptr;
-		return tbox_as_hexwkb(this._inner, variant, size);
+		// tbox_as_hexwkb_w requires a valid size_t* output parameter (not NULL).
+		// Allocate 8 bytes on the WASM heap as a sink, value is discarded.
+		const sizePtr = (
+			getModule() as unknown as { allocate(slab: Uint8Array, allocator: number): number }
+		).allocate(new Uint8Array(8), 0) as Ptr;
+		return tbox_as_hexwkb(this._inner, variant, sizePtr);
 	}
 
 	// -------------------------------------------------------------------------
@@ -208,7 +257,6 @@ export class TBox {
 		return overlaps_tbox_tbox(this._inner, other.inner);
 	}
 
-	/** True if both boxes cover the same set of points (equal bounds). */
 	isSame(other: TBox): boolean {
 		return same_tbox_tbox(this._inner, other.inner);
 	}
@@ -274,17 +322,14 @@ export class TBox {
 	// CONVERSIONS
 	// -------------------------------------------------------------------------
 
-	/** Returns the numeric dimension as an IntSpan (raw Ptr). */
 	toIntSpan(): Ptr {
 		return tbox_to_intspan(this._inner);
 	}
 
-	/** Returns the numeric dimension as a FloatSpan (raw Ptr). */
 	toFloatSpan(): Ptr {
 		return tbox_to_floatspan(this._inner);
 	}
 
-	/** Returns the temporal dimension as a TsTzSpan (raw Ptr). */
 	toTsTzSpan(): Ptr {
 		return tbox_to_tstzspan(this._inner);
 	}
@@ -293,19 +338,24 @@ export class TBox {
 	// MATH
 	// -------------------------------------------------------------------------
 
-	/** Expand the numeric dimension by an integer amount. */
 	expandInt(i: number): TBox {
 		return new TBox(tintbox_expand(this._inner, i));
 	}
 
-	/** Expand the numeric dimension by a float amount. */
 	expandFloat(d: number): TBox {
 		return new TBox(tfloatbox_expand(this._inner, d));
 	}
 
-	/** Round float bounds to maxdd decimal digits. */
 	round(maxdd: number): TBox {
 		return new TBox(tbox_round(this._inner, maxdd));
+	}
+
+	shiftScaleInt(shift: number, width: number, hasShift = true, hasWidth = true): TBox {
+		return new TBox(tintbox_shift_scale(this._inner, shift, width, hasShift, hasWidth));
+	}
+
+	shiftScaleFloat(shift: number, width: number, hasShift = true, hasWidth = true): TBox {
+		return new TBox(tfloatbox_shift_scale(this._inner, shift, width, hasShift, hasWidth));
 	}
 
 	// -------------------------------------------------------------------------
